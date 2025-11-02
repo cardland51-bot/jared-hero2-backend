@@ -128,18 +128,26 @@ app.post("/speak", async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "gpt-4o-mini-tts",
         voice: "alloy",
-        input: text
-      })
+        format: "mp3", // ✅ ensure mp3 format
+        input: text,
+      }),
     });
 
-    const buf = Buffer.from(await tts.arrayBuffer());
+    if (!tts.ok) {
+      const err = await tts.text();
+      console.error("❌ TTS API error:", err);
+      return res.status(500).json({ error: "tts_failed" });
+    }
+
+    // ✅ Stream audio properly
     res.setHeader("Content-Type", "audio/mpeg");
-    res.send(buf);
+    res.setHeader("Cache-Control", "no-store");
+    tts.body.pipe(res);
   } catch (e) {
     console.error("❌ Speak error:", e);
     res.status(500).json({ error: "speak_failed" });
