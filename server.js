@@ -16,22 +16,36 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({
-  origin: [
-    "https://cardland51-bot.github.io",   // your live frontend
-    "http://localhost:3000",              // local dev
-    "http://localhost:3001"               // fallback
-  ],
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-}));
+app.use(express.json({ limit: "10mb" }));
 
+// ----- Dynamic CORS -----
+const allowedOrigins = [
+  "https://cardland51-bot.github.io",
+  "https://jared-hero2-frontend.onrender.com",
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
 
-// temp upload directory
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn("🚫 Blocked by CORS:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+
+// ----- Temp upload directory -----
 const upload = multer({
   dest: path.join(__dirname, "data", "tmp"),
-  limits: { fileSize: 16 * 1024 * 1024 }
+  limits: { fileSize: 16 * 1024 * 1024 },
 });
 
 // ----- Health check -----
@@ -55,15 +69,15 @@ app.post("/inference", async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: system },
-          { role: "user", content: text || "Say hello" }
-        ]
-      })
+          { role: "user", content: text || "Say hello" },
+        ],
+      }),
     });
 
     const j = await r.json();
@@ -88,7 +102,7 @@ app.post("/analyze-image", upload.single("file"), async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
@@ -96,23 +110,23 @@ app.post("/analyze-image", upload.single("file"), async (req, res) => {
           {
             role: "system",
             content:
-              "You analyze landscaping photos for beds, weeds, mulch, edging, materials and produce a brief summary + 3 bullet recommendations."
+              "You analyze landscaping photos for beds, weeds, mulch, edging, materials and produce a brief summary + 3 bullet recommendations.",
           },
           {
             role: "user",
             content: [
               { type: "text", text: "Analyze this photo; be concise and practical." },
-              { type: "image_url", image_url: { url: dataUrl } }
-            ]
-          }
-        ]
-      })
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
     });
 
     const j = await r.json();
     res.json({
       summary: j?.choices?.[0]?.message?.content || "No summary",
-      confidence: 0.9
+      confidence: 0.9,
     });
   } catch (e) {
     console.error("❌ Analyze-image error:", e);
@@ -124,6 +138,8 @@ app.post("/analyze-image", upload.single("file"), async (req, res) => {
 app.post("/speak", async (req, res) => {
   try {
     const { text = "Hello from Jared." } = req.body || {};
+    console.log("🎤 TTS request:", text);
+
     const tts = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
@@ -147,6 +163,7 @@ app.post("/speak", async (req, res) => {
     // ✅ Stream audio properly
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "no-store");
+    console.log("✅ Streaming TTS response...");
     tts.body.pipe(res);
   } catch (e) {
     console.error("❌ Speak error:", e);
