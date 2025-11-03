@@ -8,7 +8,10 @@ import dotenv from "dotenv";
 import fs from "fs";
 import fetch from "node-fetch";
 
+// ----- Load Environment -----
 dotenv.config();
+console.log("🔑 OpenAI key loaded:", !!process.env.OPENAI_API_KEY);
+console.log("📁 Project ID loaded:", !!process.env.OPENAI_PROJECT_ID);
 
 // ----- Setup -----
 const __filename = fileURLToPath(import.meta.url);
@@ -45,13 +48,13 @@ app.use(
 // ----- Temp upload directory -----
 const upload = multer({
   dest: path.join(__dirname, "data", "tmp"),
-  limits: { fileSize: 16 * 1024 * 1024 },
+  limits: { fileSize: 16 * 1024 * 1024 }, // 16MB limit
 });
 
 // ----- Health check -----
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// ----- Simple GET route to stop 404 -----
+// ----- Simple GET route -----
 app.get("/analyze", (_req, res) => {
   res.json({ status: "✅ Analyze endpoint is alive and waiting for POST uploads" });
 });
@@ -69,6 +72,7 @@ app.post("/inference", async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "OpenAI-Project": process.env.OPENAI_PROJECT_ID,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -102,6 +106,7 @@ app.post("/analyze-image", upload.single("file"), async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "OpenAI-Project": process.env.OPENAI_PROJECT_ID,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -144,12 +149,13 @@ app.post("/speak", async (req, res) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "OpenAI-Project": process.env.OPENAI_PROJECT_ID,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "gpt-4o-mini-tts",
         voice: "alloy",
-        format: "mp3", // ✅ ensure mp3 format
+        format: "mp3",
         input: text,
       }),
     });
@@ -157,10 +163,9 @@ app.post("/speak", async (req, res) => {
     if (!tts.ok) {
       const err = await tts.text();
       console.error("❌ TTS API error:", err);
-      return res.status(500).json({ error: "tts_failed" });
+      return res.status(500).json({ error: "tts_failed", details: err });
     }
 
-    // ✅ Stream audio properly
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "no-store");
     console.log("✅ Streaming TTS response...");
@@ -174,3 +179,4 @@ app.post("/speak", async (req, res) => {
 // ----- Start server -----
 const port = process.env.PORT || 3001;
 app.listen(port, () => console.log(`✅ JARED-HERO2 backend running on :${port}`));
+
