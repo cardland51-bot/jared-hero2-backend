@@ -25,6 +25,7 @@ app.use(express.json({ limit: "10mb" }));
 const allowedOrigins = [
   "https://cardland51-bot.github.io",
   "https://jared-hero2-frontend.onrender.com",
+  "https://cardinalgaragepro.com",
   "http://localhost:3000",
   "http://localhost:3001",
 ];
@@ -48,11 +49,25 @@ app.use(
 // ----- Temp upload directory -----
 const upload = multer({
   dest: path.join(__dirname, "data", "tmp"),
-  limits: { fileSize: 16 * 1024 * 1024 }, // 16MB limit
+  limits: { fileSize: 16 * 1024 * 1024 }, // 16MB
 });
 
 // ----- Health check -----
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// ----- Root route (for browser checks) -----
+app.get("/", (_req, res) => {
+  res.send(`
+    <html>
+      <head><title>Cardinal Garage Pro • API</title></head>
+      <body style="font-family:system-ui;background:#0b1b16;color:#9CFFE0;text-align:center;padding-top:2rem">
+        <h1>✅ Cardinal GaragePro API Online</h1>
+        <p>Backend service for <b>HeroHUD</b> is running.</p>
+        <p>Available endpoints:<br>/health • /analyze • /analyze-image • /inference • /speak</p>
+      </body>
+    </html>
+  `);
+});
 
 // ----- Simple GET route -----
 app.get("/analyze", (_req, res) => {
@@ -179,4 +194,3 @@ app.post("/speak", async (req, res) => {
 // ----- Start server -----
 const port = process.env.PORT || 3001;
 app.listen(port, () => console.log(`✅ JARED-HERO2 backend running on :${port}`));
-
