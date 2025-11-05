@@ -1,3 +1,31 @@
-.env
+# === Node.js ===
 node_modules/
+npm-debug.log
+yarn-error.log
+
+# === Environment Variables ===
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# === App Artifacts ===
+uploads/
 data/tmp/
+dist/
+build/
+tmp/
+*.log
+
+# === OS & Editor Files ===
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === Cache ===
+.cache/
+
